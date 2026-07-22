@@ -13,7 +13,7 @@
 
 ## JSON 问题台账结构
 
-（每条问题必须包含以下字段）：
+（每条问题必须包含以下字段；生成报告前必须由 `validate_report.py` 校验。每条问题至少关联一个已注册规则，无法归入专用规则时使用 `general.diff-review`。）
 
 ```json
 {
@@ -24,8 +24,24 @@
   "branch": "",
   "baseBranch": "",
   "commit": "",
+  "baseCommit": "",
+  "repository": "",
+  "diffFiles": [],
   "generatedAt": "",
   "mode": "完整提测核查 | 无用例核查 | 无 PRD 核查 | Hotfix 无文档核查 | 复测",
+  "selectedRuleIds": ["general.diff-review", "frontend"],
+  "ruleExecutionSummary": [
+    {
+      "ruleId": "frontend.display-transform",
+      "domain": "frontend",
+      "triggerEvidence": [],
+      "status": "Executed | NotApplicable | BlockedByMissingMaterials | Skipped",
+      "result": "IssueFound | NoIssueFound | CannotDetermine",
+      "checks": [],
+      "issuesFound": [],
+      "notes": ""
+    }
+  ],
   "issues": [
     {
       "id": "QC-001",
@@ -53,11 +69,23 @@
       "evidenceFiles": [],
       "cannotVerifyReason": "",
       "issueOrigin": "NewInThisRound | IntroducedByThisChange | BypassChange | ExistingRiskExposed | InsufficientMaterial",
+      "ruleIds": [],
+      "ruleDomains": [],
       "notes": ""
     }
   ]
 }
 ```
+
+### 规则执行记录约束
+
+- 先根据 changed files、项目类型和资料形成“本轮命中规则清单”，写入 `selectedRuleIds`，再执行检查并填写 `ruleExecutionSummary`；不得只为已发现的问题补填规则。
+- `selectedRuleIds` 必须只包含注册表中的规则；每个选择的规则必须有且只有对应的 `ruleExecutionSummary` 记录，反之亦然。非空 diff 必须选择 `general.diff-review`。
+- 每个命中规则必须有 `triggerEvidence`、`checks`、`status`、`result` 和 `notes` 字段。
+- `Executed + IssueFound` 必须在 `issuesFound` 列出真实问题 ID；`Executed + NoIssueFound` 必须列出实际完成的检查项；`BlockedByMissingMaterials` 必须说明缺失资料和受影响范围。
+- 非空 `diffFiles` 必须至少有一条规则执行记录；每个问题的 `ruleIds` 必须至少包含一个已注册规则，且全部出现在 `ruleExecutionSummary`。
+- 每个 `issuesFound` ID 必须出现在 `issues`，并且对应问题必须反向引用该 `ruleId`，保证规则、问题和执行记录三方一致。
+- 未命中的规则可以记录为 `NotApplicable`，但不得把未执行写成 `NoIssueFound`。
 
 ## HTML 生成规则
 
